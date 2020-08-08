@@ -13,20 +13,20 @@ class LineParser:
     @staticmethod    
     def md5(s):
         m = hashlib.md5()
-        m.update(s)
-        return binascii.hexlify(m.digest())
+        m.update(s.encode('utf-8'))
+        return m.hexdigest()
 
     @staticmethod    
     def sha1(s):
         m = hashlib.sha1()
-        m.update(s)
-        return binascii.hexlify(m.digest())
+        m.update(s.encode('utf-8'))
+        return m.hexdigest()
 
     @staticmethod    
     def sha256(s):
         m = hashlib.sha256()
-        m.update(s)
-        return binascii.hexlify(m.digest())
+        m.update(s.encode('utf-8'))
+        return m.hexdigest()
 
     @staticmethod
     def parsesimplelinebyseparator(s, sep, sepname):
@@ -181,19 +181,19 @@ class LeakParser:
         self.collection = str(temp[0])
         self.subcollection = str(temp[1])
         bupdatecollections = False
-        if not self.BBDDcollections.has_key(self.collection): self.addBBDDcollection(self.collection)
-        if not self.BBDDsubcollections.has_key(self.subcollection): self.addBBDDsubcollection(self.subcollection)
+        if self.collection not in self.BBDDcollections: self.addBBDDcollection(self.collection)
+        if self.subcollection not in self.BBDDsubcollections: self.addBBDDsubcollection(self.subcollection)
         self.collectionid = self.BBDDcollections[self.collection]
         self.subcollectionid = self.BBDDsubcollections[self.subcollection]
 
     def addBBDDcollection(self, collection):
-        print collection
+        print(collection)
         sql = """INSERT INTO collections(collectionname) VALUES(?)"""
         self.cursor.execute(sql, (collection,))
         self.getBBDDcollections()
 
     def addBBDDsubcollection(self, subcollection):
-        print subcollection
+        print(subcollection)
         sql = """INSERT INTO subcollections(subcollectionname) VALUES(?)"""
         self.cursor.execute(sql, (subcollection,))
         self.getBBDDcollections()
@@ -207,8 +207,8 @@ class LeakParser:
         l = self.cursor.execute("SELECT * FROM subcollections")
         for e in l:
             self.BBDDsubcollections[str(e[1])] = e[0]
-        print self.BBDDcollections
-        print self.BBDDsubcollections
+        print(self.BBDDcollections)
+        print(self.BBDDsubcollections)
 
     def __init__(self, leakpath):
         self.maxlinelength = 200
@@ -226,7 +226,7 @@ class LeakParser:
         self.cursor = self.conn.cursor()
         self.getBBDDcollections()
         self.setcollection()
-        self.fleak = open(self.leakpath, "rb")
+        self.fleak = open(self.leakpath, "r")
         self.fleakcache = ""
         self.icurcache = 0
         self.icurlinestart = 0
@@ -238,12 +238,12 @@ class LeakParser:
 
     def info2bbdd_test(self, info):
         if self.test_info2bbdd_counter % 20000 == 0: 
-            if info: print repr(info)
+            if info: print(repr(info))
         self.test_info2bbdd_counter += 1
 
     def info2bbdd_real(self, info):
         if self.test_info2bbdd_counter % 20000 == 0: 
-            if info: print repr(info)
+            if info: print(repr(info))
         self.test_info2bbdd_counter += 1
         if info:
             sql = """INSERT INTO credentials(collection, subcollection, username, email, password_plaintext, password_md5, password_sha1, password_sha256, password_bcrypt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"""
@@ -267,11 +267,11 @@ class LeakParser:
             line2["type"] == line3["type"] and \
             line3["type"] == line4["type"] and \
             line4["type"] == line5["type"]):
-            print "Inconsistent file by first lines"
+            print("Inconsistent file by first lines")
             binconsistence = True
         if not binconsistence:
             FileLeakType = line1["type"]
-            print "FileLeakType:", FileLeakType
+            print("FileLeakType:", FileLeakType)
             InconsistencesCounter = 0
             self.info2bbdd(line1)
             self.info2bbdd(line2)
@@ -289,16 +289,16 @@ class LeakParser:
                 else:
                     if InconsistencesCounter: InconsistencesCounter -= 1
                 if InconsistencesCounter>=10:
-                    print "CAREFUL Too much Inconsistences, break!"
+                    print("CAREFUL Too much Inconsistences, break!")
                     binconsistence = True
                     break
                 self.info2bbdd(line)
         if binconsistence:
-            f = open("inconsistences.txt", "a+b")
+            f = open("inconsistences.txt", "a")
             f.write(self.leakpath+":::"+repr(lastinconsistences)+"\r\n")
             f.close()
         else:
-            f = open("consistences.txt", "a+b")
+            f = open("consistences.txt", "a")
             f.write(self.leakpath+"\r\n")
             f.close()
         self.conn.commit()
@@ -306,16 +306,16 @@ class LeakParser:
 
 def managefile(p):
     try:
-        print "Managing file:", p
+        print("Managing file:", p)
         lp = LeakParser(p)
-        print lp.collection
-        print lp.subcollection
+        print(lp.collection)
+        print(lp.subcollection)
         lp.run()
         lp.fleak.close()
         shutil.move(p, p+".ALREADYPARSED")
     except Exception as e:
-        s = p + "----" + repr(e.message) + "----" + repr(e.args) + "\r\n"
-        f = open("exceptions.txt", "a+b")
+        s = p + "----" + repr(e.args) + "----" + repr(e.args) + "\r\n"
+        f = open("exceptions.txt", "a")
         f.write(s)
         f.close()
 
